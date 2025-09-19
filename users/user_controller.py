@@ -1,53 +1,46 @@
-# app/users/controller.py
-from fastapi import APIRouter
-from .user_models import UserCreate, UserPublic
-from fastapi import APIRouter, HTTPException, status
-from .user_models import UserCreate, UserPublic, UserUpdate
+# users/user_controller.py
 
-# 1. Cria um roteador específico para usuários
-router = APIRouter(
-    prefix="/users",       # Todas as rotas aqui começarão com /users
-    tags=["Users"]         # Agrupa as rotas no Swagger
-)
+from sqlalchemy.orm import Session
+from fastapi import APIRouter, Depends, status
+from typing import List
+from database import SessionLocal
+from . import user_service, user_models
 
-# Lista FAKE para simular um banco de dados
-fake_db = []
+router = APIRouter(prefix="/users", tags=["Users"])
 
-# 2. Define o endpoint para criar um usuário
-@router.post("/save", response_model=UserPublic)
-def create_user(user: UserCreate):
-    # user aqui é um objeto Pydantic, com dados já validados!
-    new_user_data = user.model_dump()
-    new_user_data["id"] = len(fake_db) + 1
+# Esta função é a nossa "Injeção de Dependência".
+# O FastAPI vai chamá-la para cada requisição que precisar de uma sessão com o banco.
+# A palavra 'yield' entrega a sessão para a rota e, quando a rota termina,
+# o código após o 'yield' (db.close()) é executado, garantindo que a conexão seja fechada.
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
-    new_user = UserPublic(**new_user_data)
-    fake_db.append(new_user)
+@router.post("/", response_model=user_models.UserPublic, status_code=status.HTTP_201_CREATED)
+def create_user(user: user_models.UserCreate, db: Session = Depends(get_db)):
+    """Endpoint para criar um novo usuário. Recebe os dados validados (user)
+    e a sessão do banco (db) através da injeção de dependência."""
+    return user_service.create_new_user(db=db, user=user)
 
-    return new_user # FastAPI converte para JSON
+@router.get("/", response_model=List[user_models.UserPublic])
+def read_users(db: Session = Depends(get_db)):
+    """Endpoint para listar todos os usuários."""
+    return user_service.get_all_users(db)
 
-@router.get("/", response_model=list[UserPublic])
-def list_users():
-    # Converte os dicionários do 'banco de dados' para o modelo público
-    return [UserPublic(**user_data) for user_data in fake_db.values()]
+@router.get("/{user_id}", response_model=user_models.UserPublic)
+def read_user(user_id: int, db: Session = Depends(get_db)):
+    """Endpoint para buscar um usuário pelo ID."""
+    return user_service.get_user_by_id(db, user_id=user_id)
 
-@router.put("/{user_id}", response_model=UserPublic)
-def update_user(user_id: int, user_update: UserUpdate):
-    if user_id not in fake_db:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+@router.put("/{user_id}", response_model=user_models.UserPublic)
+def update_user(user_id: int, user: user_models.UserUpdate, db: Session = Depends(get_db)):
+    """Endpoint para atualizar um usuário."""
+    return user_service.update_existing_user(db=db, user_id=user_id, user_in=user)
 
-    stored_user_data = fake_db[user_id]
-    update_data = user_update.model_dump(exclude_unset=True) # Apenas campos enviados
-
-    updated_user = stored_user_data.copy()
-    updated_user.update(update_data)
-    fake_db[user_id] = updated_user
-
-    return UserPublic(**updated_user)
-
-@router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_user(user_id: int):
-    if user_id not in fake_db:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-
-    del fake_db[user_id]
-    # Com status 204, a resposta não deve ter corpo. O FastAPI cuida disso.
+@router.delete("/{user_id}", response_model=user_models.UserPublic)
+def delete_user(user_id: int, db: Session = Depends(get_db)):
+    """Endpoint para deletar um usuário."""
+    return user_service.delete_user_by_id(db=db, user_id=user_id)

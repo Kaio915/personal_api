@@ -1,52 +1,46 @@
-# app/personals/controller.py
-from fastapi import APIRouter
-from .personal_models import PersonalCreate, PersonalPublic, PersonalUpdate
-from fastapi import APIRouter, HTTPException, status
+# users/user_controller.py
 
-# 1. Cria um roteador específico para usuários
-router = APIRouter(
-    prefix="/personals",       # Todas as rotas aqui começarão com /personals
-    tags=["Personals"]         # Agrupa as rotas no Swagger
-)
+from sqlalchemy.orm import Session
+from fastapi import APIRouter, Depends, status
+from typing import List
+from database import SessionLocal
+from . import personal_service, personal_models
 
-# Lista FAKE para simular um banco de dados
-fake_db = []
+router = APIRouter(prefix="/personals", tags=["Personals"])
 
-# 2. Define o endpoint para criar um usuário
-@router.post("/save", response_model=PersonalPublic)
-def create_personal(personal: PersonalCreate):
-    # personal aqui é um objeto Pydantic, com dados já validados!
-    new_personal_data = personal.model_dump()
-    new_personal_data["id"] = len(fake_db) + 1
+# Esta função é a nossa "Injeção de Dependência".
+# O FastAPI vai chamá-la para cada requisição que precisar de uma sessão com o banco.
+# A palavra 'yield' entrega a sessão para a rota e, quando a rota termina,
+# o código após o 'yield' (db.close()) é executado, garantindo que a conexão seja fechada.
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
-    new_personal = PersonalPublic(**new_personal_data)
-    fake_db.append(new_personal)
+@router.post("/", response_model=personal_models.PersonalPublic, status_code=status.HTTP_201_CREATED)
+def create_personal(personal: personal_models.PersonalCreate, db: Session = Depends(get_db)):
+    """Endpoint para criar um novo personal. Recebe os dados validados (personal)
+    e a sessão do banco (db) através da injeção de dependência."""
+    return personal_service.create_new_personal(db=db, personal=personal)
 
-    return new_personal # FastAPI converte para JSON
+@router.get("/", response_model=List[personal_models.PersonalPublic])
+def read_personals(db: Session = Depends(get_db)):
+    """Endpoint para listar todos os personals."""
+    return personal_service.get_all_personals(db)
 
-@router.get("/", response_model=list[PersonalPublic])
-def list_personals():
-    # Converte os dicionários do 'banco de dados' para o modelo público
-    return [PersonalPublic(**personal_data) for personal_data in fake_db.values()]
+@router.get("/{personal_id}", response_model=personal_models.PersonalPublic)
+def read_personal(personal_id: int, db: Session = Depends(get_db)):
+    """Endpoint para buscar um personal pelo ID."""
+    return personal_service.get_personal_by_id(db, personal_id=personal_id)
 
-@router.put("/{personal_id}", response_model=PersonalPublic)
-def update_personal(personal_id: int, personal_update: PersonalUpdate):
-    if personal_id not in fake_db:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Personal not found")
+@router.put("/{personal_id}", response_model=personal_models.PersonalPublic)
+def update_personal(personal_id: int, personal: personal_models.PersonalUpdate, db: Session = Depends(get_db)):
+    """Endpoint para atualizar um personal."""
+    return personal_service.update_existing_personal(db=db, personal_id=personal_id, personal_in=personal)
 
-    stored_personal_data = fake_db[personal_id]
-    update_data = personal_update.model_dump(exclude_unset=True) # Apenas campos enviados
-
-    updated_personal = stored_personal_data.copy()
-    updated_personal.update(update_data)
-    fake_db[personal_id] = updated_personal
-
-    return PersonalPublic(**updated_personal)
-
-@router.delete("/{personal_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_personal(personal_id: int):
-    if personal_id not in fake_db:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Personal not found")
-
-    del fake_db[personal_id]
-    # Com status 204, a resposta não deve ter corpo. O FastAPI cuida disso.
+@router.delete("/{personal_id}", response_model=personal_models.PersonalPublic)
+def delete_personal(personal_id: int, db: Session = Depends(get_db)):
+    """Endpoint para deletar um personal."""
+    return personal_service.delete_personal_by_id(db=db, personal_id=personal_id)
