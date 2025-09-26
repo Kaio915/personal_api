@@ -1,28 +1,15 @@
 # users/user_controller.py
-
 from sqlalchemy.orm import Session
 from fastapi import APIRouter, Depends, status
 from typing import List
-from database import SessionLocal
+from database import get_db
 from . import user_service, user_models
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
-# Esta função é a nossa "Injeção de Dependência".
-# O FastAPI vai chamá-la para cada requisição que precisar de uma sessão com o banco.
-# A palavra 'yield' entrega a sessão para a rota e, quando a rota termina,
-# o código após o 'yield' (db.close()) é executado, garantindo que a conexão seja fechada.
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
 @router.post("/", response_model=user_models.UserPublic, status_code=status.HTTP_201_CREATED)
 def create_user(user: user_models.UserCreate, db: Session = Depends(get_db)):
-    """Endpoint para criar um novo usuário. Recebe os dados validados (user)
-    e a sessão do banco (db) através da injeção de dependência."""
+    """Endpoint para criar um novo usuário."""
     return user_service.create_new_user(db=db, user=user)
 
 @router.get("/", response_model=List[user_models.UserPublic])

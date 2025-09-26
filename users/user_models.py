@@ -1,42 +1,44 @@
 # users/user_model.py
-
-from sqlalchemy import Column, Integer, String
-from pydantic import BaseModel, EmailStr, Field
-from database import Base # Importa a Base que criamos
+from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy.orm import relationship
+from pydantic import BaseModel, EmailStr, Field, ConfigDict
+from database import Base
+from roles.role_model import RolePublic # Importa o schema público de Role
 
 # ==================================
 # MODELO DA TABELA (SQLAlchemy)
 # ==================================
-# Esta classe define a estrutura da tabela 'users' no banco de dados.
 class User(Base):
-    __tablename__ = "users"  # Nome da tabela no banco
-
-    # Colunas da tabela
+    __tablename__ = "users"
     id = Column(Integer, primary_key=True, index=True)
-    email = Column(String, unique=True, index=True) # E-mail deve ser único
-    hashed_password = Column(String) # Armazenaremos a senha "hasheada"
-    full_name = Column(String, index=True, nullable=True) # Nome pode ser nulo
+    email = Column(String, unique=True, index=True)
+    hashed_password = Column(String)
+    full_name = Column(String, index=True, nullable=True)
+    profile_image_url = Column(String, nullable=True)
+    # Chave estrangeira que aponta para a tabela 'roles'
+    role_id = Column(Integer, ForeignKey("roles.id"))
+    # Cria a relação para que possamos acessar o objeto Role a partir de um User
+    role = relationship("Role")
 
 # ==================================
-# SCHEMAS (Pydantic) - O CONTRATO DA API
+# SCHEMAS (Pydantic)
 # ==================================
-# Estes schemas definem como os dados são recebidos e enviados pela API.
-
-# Schema para os dados que o cliente envia ao CRIAR um usuário
 class UserCreate(BaseModel):
-    email: EmailStr  # Valida o formato do e-mail
+    email: EmailStr
     password: str = Field(min_length=8)
     full_name: str | None = Field(default=None, min_length=3)
+    profile_image_url: str | None = None
+    role_id: int = Field(description="ID do role a ser associado ao usuário")
 
-# Schema para os dados que o cliente envia ao ATUALIZAR um usuário
 class UserUpdate(BaseModel):
-    email: EmailStr | None = None
-    password: str | None = Field(default=None, min_length=8)
     full_name: str | None = Field(default=None, min_length=3)
+    profile_image_url: str | None = None
 
-# Schema para os dados que a API RETORNA ao cliente (público)
-# NUNCA inclua a senha ou outros dados sensíveis aqui!
 class UserPublic(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     email: EmailStr
     full_name: str | None = None
+    profile_image_url: str | None = None
+    role: RolePublic # O perfil agora é um objeto aninhado

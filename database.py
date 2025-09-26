@@ -20,3 +20,12 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 # 4. Cria uma classe Base. Nossos modelos de tabela do SQLAlchemy herdarão desta
 #    classe para que o ORM possa gerenciá-los.
 Base = declarative_base()
+
+# 5. [NOVO] Função para obter a sessão do banco (Injeção de Dependência)
+#    Esta função garante que a sessão com o banco seja sempre fechada após a requisição.
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
