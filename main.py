@@ -4,7 +4,7 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
-from users import user_controller
+from personals import personal_controller
 from roles import role_controller
 from auth import auth_controller
 from database import engine, Base, get_db
