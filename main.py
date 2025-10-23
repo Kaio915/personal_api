@@ -1,5 +1,6 @@
 # main.py
 import os
+from users import user_controller
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
