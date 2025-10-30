@@ -1,5 +1,5 @@
 # users/user_model.py
-from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy import Column, Integer, String, ForeignKey, Boolean
 from sqlalchemy.orm import relationship
 from pydantic import BaseModel, EmailStr, Field, ConfigDict
 from database import Base
@@ -15,6 +15,7 @@ class User(Base):
     hashed_password = Column(String)
     full_name = Column(String, index=True, nullable=True)
     profile_image_url = Column(String, nullable=True)
+    approved = Column(Boolean, default=False, nullable=False)  # Novo campo: aprovação do admin
     # Chave estrangeira que aponta para a tabela 'roles'
     role_id = Column(Integer, ForeignKey("roles.id"))
     # Cria a relação para que possamos acessar o objeto Role a partir de um User
@@ -41,4 +42,9 @@ class UserPublic(BaseModel):
     email: EmailStr
     full_name: str | None = None
     profile_image_url: str | None = None
+    approved: bool = False
     role: RolePublic # O perfil agora é um objeto aninhado
+
+class UserApproval(BaseModel):
+    """Schema para aprovar/desaprovar usuários"""
+    approved: bool

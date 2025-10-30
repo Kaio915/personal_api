@@ -8,12 +8,15 @@ from sqlalchemy.orm import Session
 from personals import personal_controller
 from roles import role_controller
 from auth import auth_controller
+from connections import connection_controller
+from messages import message_controller
 from database import engine, Base, get_db
 from users.user_models import User
 from roles.role_model import Role
 from security import get_password_hash
 
-Base.metadata.create_all(bind=engine)
+# Commented due to Unicode encoding issue - create tables manually via SQL
+# Base.metadata.create_all(bind=engine)
 
 def seed_admin_user():
     """
@@ -41,8 +44,9 @@ def seed_admin_user():
         new_admin = User(
             email="admin@fitconnect.com",
             hashed_password=hashed_password,
-            full_name="Administrador",
-            role_id=admin_role.id
+            full_name="Administrador do Sistema",
+            role_id=admin_role.id,
+            approved=True  # Admin sempre aprovado
         )
         db.add(new_admin)
         db.commit()
@@ -54,22 +58,26 @@ def seed_admin_user():
     finally:
         db.close()
 
-seed_admin_user()
+# Temporarily commented due to Unicode encoding issue
+# seed_admin_user()
 
 app = FastAPI(title="API do Meu Projeto", version="0.1.0")
 
-
+# Configuração CORS mais permissiva para desenvolvimento
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],  # Em produção, especifique os domínios permitidos
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],  # Permite que o navegador leia todos os headers da resposta
 )
 
 app.include_router(user_controller.router)
 app.include_router(role_controller.router)
 app.include_router(auth_controller.router)
+app.include_router(connection_controller.router)
+app.include_router(message_controller.router)
 
 
 if __name__ == '__main__':

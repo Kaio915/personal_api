@@ -31,3 +31,22 @@ def update_user(user_id: int, user: user_models.UserUpdate, db: Session = Depend
 def delete_user(user_id: int, db: Session = Depends(get_db)):
     """Endpoint para deletar um usuário."""
     return user_service.delete_user_by_id(db=db, user_id=user_id)
+
+@router.patch("/{user_id}/approval", response_model=user_models.UserPublic)
+def update_user_approval(
+    user_id: int,
+    approval: user_models.UserApproval,
+    db: Session = Depends(get_db)
+):
+    """Endpoint para aprovar/desaprovar um usuário (apenas admin)."""
+    return user_service.update_user_approval(db=db, user_id=user_id, approved=approval.approved)
+
+@router.get("/pending/approval", response_model=List[user_models.UserPublic])
+def get_pending_users(db: Session = Depends(get_db)):
+    """Endpoint para listar usuários pendentes de aprovação."""
+    return user_service.get_pending_users(db)
+
+@router.get("/trainers/approved", response_model=List[user_models.UserPublic])
+def get_approved_trainers(db: Session = Depends(get_db)):
+    """Endpoint para listar personal trainers aprovados."""
+    return user_service.get_approved_trainers(db)

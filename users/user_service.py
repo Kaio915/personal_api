@@ -27,3 +27,16 @@ def update_existing_user(db: Session, user_id: int, user_in: user_models.UserUpd
 def delete_user_by_id(db: Session, user_id: int):
     db_user = get_user_by_id(db, user_id)
     return user_repository.delete_user(db=db, db_user=db_user)
+
+def update_user_approval(db: Session, user_id: int, approved: bool):
+    """Atualiza o status de aprovação de um usuário"""
+    db_user = get_user_by_id(db, user_id)
+    return user_repository.update_user_approval(db=db, db_user=db_user, approved=approved)
+
+def get_pending_users(db: Session):
+    """Retorna todos os usuários pendentes de aprovação"""
+    return user_repository.get_users_by_approval_status(db, approved=False)
+
+def get_approved_trainers(db: Session):
+    """Retorna todos os personal trainers aprovados (role_id=2)"""
+    return user_repository.get_approved_trainers(db)

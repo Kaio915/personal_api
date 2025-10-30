@@ -16,6 +16,12 @@ def authenticate_user(db: Session, email: str, password: str):
     user = user_repository.get_user_by_email(db, email=email)
     if not user or not verify_password(password, user.hashed_password):
         return None
+    # Verifica se o usuário está aprovado (exceto admin)
+    if user.role.name != "admin" and not user.approved:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Sua conta ainda não foi aprovada pelo administrador. Aguarde a aprovação."
+        )
     return user
 
 def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
