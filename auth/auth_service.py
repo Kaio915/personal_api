@@ -12,10 +12,28 @@ from users.user_models import User
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
-def authenticate_user(db: Session, email: str, password: str):
+def authenticate_user(db: Session, email: str, password: str, user_type: str = None):
+    """
+    Autentica usuário com validação de role
+    user_type: 'student' ou 'trainer' (opcional, usado para validação)
+    """
     user = user_repository.get_user_by_email(db, email=email)
     if not user or not verify_password(password, user.hashed_password):
         return None
+    
+    # Validação de role: apenas admin pode logar em qualquer tipo
+    if user_type and user.role.name != "admin":
+        if user_type == "student" and user.role.name != "aluno":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Este usuário não é um aluno. Tente fazer login como Personal Trainer."
+            )
+        elif user_type == "trainer" and user.role.name != "personal":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Este usuário não é um Personal Trainer. Tente fazer login como Aluno."
+            )
+    
     # Verifica se o usuário está aprovado (exceto admin)
     if user.role.name != "admin" and not user.approved:
         raise HTTPException(

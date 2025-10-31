@@ -1,5 +1,5 @@
 # auth/auth_controller.py
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 
@@ -12,12 +12,27 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 @router.post("/login")
-def login_for_access_token(db: Session = Depends(get_db), form_data: OAuth2PasswordRequestForm = Depends()):
-    user = auth_service.authenticate_user(db, email=form_data.username, password=form_data.password)
+def login_for_access_token(
+    db: Session = Depends(get_db), 
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    user_type: str = Query(None, description="Tipo de usuário: 'student' ou 'trainer'")
+):
+    """
+    Login com validação de role:
+    - user_type='student': apenas alunos e admin podem logar
+    - user_type='trainer': apenas personal trainers e admin podem logar
+    - user_type=None: qualquer usuário pode logar (usado para admin)
+    """
+    user = auth_service.authenticate_user(
+        db, 
+        email=form_data.username, 
+        password=form_data.password,
+        user_type=user_type
+    )
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
+            detail="Email ou senha incorretos",
             headers={"WWW-Authenticate": "Bearer"},
         )
 

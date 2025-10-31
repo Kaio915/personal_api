@@ -25,8 +25,12 @@ def update_existing_user(db: Session, user_id: int, user_in: user_models.UserUpd
     return user_repository.update_user(db=db, db_user=db_user, user_in=user_in)
 
 def delete_user_by_id(db: Session, user_id: int):
+    print(f"🗑️ DELETE USER SERVICE - user_id: {user_id}")
     db_user = get_user_by_id(db, user_id)
-    return user_repository.delete_user(db=db, db_user=db_user)
+    print(f"   Usuário encontrado: {db_user.email} (id={db_user.id})")
+    result = user_repository.delete_user(db=db, db_user=db_user)
+    print(f"   ✅ Usuário deletado do banco de dados")
+    return result
 
 def update_user_approval(db: Session, user_id: int, approved: bool):
     """Atualiza o status de aprovação de um usuário"""
@@ -35,7 +39,11 @@ def update_user_approval(db: Session, user_id: int, approved: bool):
 
 def get_pending_users(db: Session):
     """Retorna todos os usuários pendentes de aprovação"""
-    return user_repository.get_users_by_approval_status(db, approved=False)
+    pending_users = user_repository.get_users_by_approval_status(db, approved=False)
+    print(f"📋 GET PENDING USERS - Encontrados {len(pending_users)} usuários pendentes:")
+    for user in pending_users:
+        print(f"   - {user.email} (id={user.id}, approved={user.approved})")
+    return pending_users
 
 def get_approved_trainers(db: Session):
     """Retorna todos os personal trainers aprovados (role_id=2)"""

@@ -57,8 +57,10 @@ def update_user(db: Session, db_user: user_models.User, user_in: user_models.Use
 
 # --- FUNÇÃO DE DELEÇÃO (DELETE) ---
 def delete_user(db: Session, db_user: user_models.User):
+    print(f"📦 REPOSITORY DELETE - Deletando user_id={db_user.id}, email={db_user.email}")
     db.delete(db_user)
     db.commit()
+    print(f"   ✅ Commit realizado - usuário deletado permanentemente")
     return db_user
 
 # --- FUNÇÃO DE APROVAÇÃO ---
