@@ -2,6 +2,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from sqlalchemy.orm import Session
+from pydantic import BaseModel
 
 from database import get_db
 from . import auth_service
@@ -10,6 +11,18 @@ from users.user_models import UserPublic, User
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
+
+class ResetPasswordRequest(BaseModel):
+    email: str
+    new_password: str
+
+class RequestCodeRequest(BaseModel):
+    email: str
+
+class VerifyCodeRequest(BaseModel):
+    email: str
+    code: str
+    new_password: str
 
 @router.post("/login")
 def login_for_access_token(
@@ -59,3 +72,65 @@ def login_for_access_token(
 def get_current_user_info(current_user: User = Depends(get_current_user)):
     """Retorna os dados do usuário autenticado"""
     return current_user
+
+@router.post("/reset-password")
+def reset_password(
+    request: ResetPasswordRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Reset de senha sem token (simplificado para MVP).
+    Em produção, deveria enviar email com token de confirmação.
+    DEPRECATED: Use /request-reset-code e /verify-reset-code para maior segurança
+    """
+    success = auth_service.reset_password(db, request.email, request.new_password)
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Email não encontrado"
+        )
+    return {"message": "Senha alterada com sucesso"}
+
+@router.post("/request-reset-code")
+def request_reset_code(
+    request: RequestCodeRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Solicita código de verificação para reset de senha.
+    O código será enviado por email (ou console em dev).
+    """
+    result = auth_service.request_password_reset_code(db, request.email)
+    if not result["success"]:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=result["message"]
+        )
+    
+    return {
+        "message": "Código de verificação enviado para o email",
+        "dev_code": result.get("code")  # Remover em produção!
+    }
+
+@router.post("/verify-reset-code")
+def verify_reset_code(
+    request: VerifyCodeRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Verifica código e redefine a senha.
+    """
+    result = auth_service.verify_code_and_reset_password(
+        db, 
+        request.email, 
+        request.code, 
+        request.new_password
+    )
+    
+    if not result["success"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=result["message"]
+        )
+    
+    return {"message": "Senha alterada com sucesso"}

@@ -35,7 +35,18 @@ def create_user(db: Session, user: user_models.UserCreate, role_id: int):
         full_name=user.full_name,
         profile_image_url=user.profile_image_url,
         role_id=role_id,
-        approved=is_auto_approved
+        approved=is_auto_approved,
+        # Campos de Aluno
+        goals=user.goals,
+        fitness_level=user.fitnessLevel,  # camelCase do frontend -> snake_case do banco
+        registration_date=user.registration_date,
+        # Campos de Personal Trainer
+        specialty=user.specialty,
+        cref=user.cref,
+        experience=user.experience,
+        bio=user.bio,
+        hourly_rate=user.hourlyRate,  # camelCase do frontend -> snake_case do banco
+        city=user.city
     )
     db.add(db_user)
     db.commit()

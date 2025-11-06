@@ -27,10 +27,11 @@ def update_user(user_id: int, user: user_models.UserUpdate, db: Session = Depend
     """Endpoint para atualizar um usuário."""
     return user_service.update_existing_user(db=db, user_id=user_id, user_in=user)
 
-@router.delete("/{user_id}", response_model=user_models.UserPublic)
+@router.delete("/{user_id}", status_code=status.HTTP_200_OK)
 def delete_user(user_id: int, db: Session = Depends(get_db)):
     """Endpoint para deletar um usuário."""
-    return user_service.delete_user_by_id(db=db, user_id=user_id)
+    user_service.delete_user_by_id(db=db, user_id=user_id)
+    return {"message": "Usuário deletado com sucesso"}
 
 @router.patch("/{user_id}/approval", response_model=user_models.UserPublic)
 def update_user_approval(
