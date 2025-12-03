@@ -79,6 +79,9 @@ class UserPublic(BaseModel):
     hourly_rate: str | None = None
     city: str | None = None
     role: RolePublic # O perfil agora é um objeto aninhado
+    # Avaliação média do trainer (preenchida dinamicamente pelo controller)
+    average_rating: float | None = None
+    rating_count: int | None = None
 
 class UserApproval(BaseModel):
     """Schema para aprovar/desaprovar usuários"""

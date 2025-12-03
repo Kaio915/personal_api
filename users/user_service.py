@@ -46,5 +46,35 @@ def get_pending_users(db: Session):
     return pending_users
 
 def get_approved_trainers(db: Session):
-    """Retorna todos os personal trainers aprovados (role_id=2)"""
-    return user_repository.get_approved_trainers(db)
+    """Retorna todos os personal trainers aprovados (role_id=2) e inclui média de avaliações."""
+    trainers = user_repository.get_approved_trainers(db)
+    # Evita import circular colocando import local
+    from ratings import rating_repository
+
+    result = []
+    for t in trainers:
+        agg = rating_repository.get_trainer_rating_aggregate(db, t.id)
+        # Build a plain dict and avoid returning ORM objects (like Role) directly
+        trainer_dict = {
+            'id': t.id,
+            'email': t.email,
+            'full_name': t.full_name,
+            'profile_image_url': t.profile_image_url,
+            'approved': t.approved,
+            'goals': t.goals,
+            'fitness_level': t.fitness_level,
+            'registration_date': t.registration_date,
+            'specialty': t.specialty,
+            'cref': t.cref,
+            'experience': t.experience,
+            'bio': t.bio,
+            'hourly_rate': t.hourly_rate,
+            'city': t.city,
+            # role as plain dict with only the fields expected by the frontend
+            'role': {'name': getattr(t.role, 'name', None)},
+            'average_rating': agg.get('avg'),
+            'rating_count': agg.get('count')
+        }
+        result.append(trainer_dict)
+
+    return result

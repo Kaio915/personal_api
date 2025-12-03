@@ -10,6 +10,7 @@ from roles import role_controller
 from auth import auth_controller
 from connections import connection_controller
 from messages import message_controller
+from ratings import rating_controller
 from database import engine, Base, get_db
 from users.user_models import User
 from roles.role_model import Role
@@ -78,6 +79,7 @@ app.include_router(role_controller.router)
 app.include_router(auth_controller.router)
 app.include_router(connection_controller.router)
 app.include_router(message_controller.router)
+app.include_router(rating_controller.router)
 
 
 if __name__ == '__main__':
