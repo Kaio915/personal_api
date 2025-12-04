@@ -28,16 +28,25 @@ if sys.version_info >= (3, 13):
     
     extensions.register_type = _patched_register_type
 
-APP_PROFILE = os.getenv("APP_PROFILE", "DEV")
+APP_PROFILE = os.getenv("APP_PROFILE", "DEV").upper()
 
+# Connection strings
+# Local connection string (use this when running locally if no env override provided)
+LOCAL_DATABASE_URL = (
+    "postgresql://personal:gPrmpnPWEyniyMZwLI8potIHWjjII0zx@"
+    "dpg-d4p0pe0gjchc73891jpg-a.oregon-postgres.render.com/personal_bd_or6k"
+)
+
+# Choose DB URL based on environment profile.
+# - In DEV (local) use the `LOCAL_DATABASE_URL` or the env var `LOCAL_DATABASE_URL` if set.
+# - In PROD use the `DATABASE_URL` environment variable (Render/Heroku style),
+#   falling back to the same LOCAL_DATABASE_URL only if DATABASE_URL is missing.
 if APP_PROFILE == "DEV":
-    # URL para desenvolvimento local
-    # Adiciona parâmetros de conexão para forçar encoding e suprimir avisos
-    SQLALCHEMY_DATABASE_URL = "postgresql://postgres:postgres@localhost/personaltrainer?client_encoding=utf8&application_name=fitconnect"
+    SQLALCHEMY_DATABASE_URL = os.getenv("LOCAL_DATABASE_URL", LOCAL_DATABASE_URL)
 else:
-    # URL para produção (Render ou outro provedor)
-    # Render fornece a variável DATABASE_URL automaticamente
-    SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://localhost/mydb")
+    SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", LOCAL_DATABASE_URL)
+
+print(f"[database] APP_PROFILE={APP_PROFILE}, using DB URL: {SQLALCHEMY_DATABASE_URL.split('@')[-1][:60]}...")
 
 # 2. Cria a "engine" do SQLAlchemy, que é o ponto de entrada para o banco de dados.
 #    Ela gerencia as conexões com o banco.

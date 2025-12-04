@@ -64,14 +64,25 @@ def seed_admin_user():
 
 app = FastAPI(title="API do Meu Projeto", version="0.1.0")
 
-# Configuração CORS mais permissiva para desenvolvimento
+# Configure CORS origins. Use FRONTEND_URL in production, otherwise allow all for local dev.
+APP_PROFILE = os.getenv("APP_PROFILE", "DEV").upper()
+FRONTEND_URL = os.getenv("FRONTEND_URL", "https://personal-front-2.onrender.com")
+
+if APP_PROFILE == "PROD":
+    allow_origins = [FRONTEND_URL]
+else:
+    # During development, allow local dev and localhost origins and the prod front for testing
+    allow_origins = ["*"]
+
+print(f"[main] APP_PROFILE={APP_PROFILE}, CORS allow_origins={allow_origins}")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Em produção, especifique os domínios permitidos
+    allow_origins=allow_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-    expose_headers=["*"],  # Permite que o navegador leia todos os headers da resposta
+    expose_headers=["*"],
 )
 
 app.include_router(user_controller.router)
