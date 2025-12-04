@@ -54,27 +54,9 @@ def get_approved_trainers(db: Session):
     result = []
     for t in trainers:
         agg = rating_repository.get_trainer_rating_aggregate(db, t.id)
-        # Build a plain dict and avoid returning ORM objects (like Role) directly
-        trainer_dict = {
-            'id': t.id,
-            'email': t.email,
-            'full_name': t.full_name,
-            'profile_image_url': t.profile_image_url,
-            'approved': t.approved,
-            'goals': t.goals,
-            'fitness_level': t.fitness_level,
-            'registration_date': t.registration_date,
-            'specialty': t.specialty,
-            'cref': t.cref,
-            'experience': t.experience,
-            'bio': t.bio,
-            'hourly_rate': t.hourly_rate,
-            'city': t.city,
-            # role as plain dict with only the fields expected by the frontend
-            'role': {'name': getattr(t.role, 'name', None)},
-            'average_rating': agg.get('avg'),
-            'rating_count': agg.get('count')
-        }
-        result.append(trainer_dict)
+        # Adiciona os campos de rating diretamente no objeto SQLAlchemy
+        t.average_rating = agg.get('avg')
+        t.rating_count = agg.get('count')
+        result.append(t)
 
     return result
